@@ -5,6 +5,7 @@ from image_analysis import analyze_image
 import sounddevice as sd
 import soundfile as sf
 import os
+import time
 
 # Set the credentials for Google Cloud APIs
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\googleCloudCredentials\credentials.json"
@@ -34,6 +35,7 @@ def main():
         if choice == "1":
             # Record audio from the mic for 5 seconds
             audio_file = record_audio(duration=5, filename="recorded_audio.wav")
+            time.sleep(2)
             # Use the recorded audio file for STT
             recognized_text = speech_to_text(audio_file)
             if recognized_text:

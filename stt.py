@@ -14,7 +14,9 @@ def speech_to_text(audio_path):
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,  # Adjust based on your audio file format
         sample_rate_hertz=16000,
-        language_code="en-US"
+        # language_code="en-US"
+        language_code = "ko-KR"  # Recognize Korean speech
+
     )
 
     # Request recognition
