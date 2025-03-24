@@ -3,6 +3,7 @@ import numpy as np
 import scipy.signal as signal
 import speech_recognition as sr
 from google.cloud import texttospeech
+from pydub import AudioSegment
 import pyaudio
 
 # Google Cloud API 인증 정보 설정
@@ -21,13 +22,27 @@ def text_to_speech(text, filename="response.mp3"):
         ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
         name="ko-KR-Wavenet-A"
     )
-    audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3,  # 기본적으로 MP3 형식
+        sample_rate_hertz=44100  # 샘플링 레이트를 44.1kHz로 설정
+    )
     synthesis_input = texttospeech.SynthesisInput(text=text)
     response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
     
+    # 응답 음성을 MP3 파일로 저장
     with open(filename, "wb") as out:
         out.write(response.audio_content)
     print("응답 음성이 저장되었습니다:", filename)
+
+    # 저장된 MP3 파일을 44.1kHz, 16비트, 스테레오로 변환
+    audio = AudioSegment.from_mp3(filename)
+    audio = audio.set_channels(2)  # 스테레오로 변환
+    audio = audio.set_sample_width(2)  # 16비트로 설정 (2바이트)
+    audio = audio.set_frame_rate(44100)  # 44.1kHz 샘플링 레이트로 변경
+
+    # 변환된 오디오 저장
+    audio.export(filename, format="mp3")
+    print(f"변환된 응답 음성 저장 완료: {filename}")
 
 # 오디오 필터 적용 (특정 주파수 대역 통과)
 def bandpass_filter(audio_data, rate, lowcut, highcut):
@@ -64,36 +79,26 @@ def recognize_speech():
 def wake_word_detection():
     while True:
         text = recognize_speech()
-        if text and "지니야" in text:
+        if text and ("약손아" in text or "약 손아" in text or "약 소나" in text or "약손" in text):
             print("웨이크 워드 감지! 시스템 활성화...")
             response_text = "네, 무엇을 도와드릴까요?"
             text_to_speech(response_text, "response.mp3")
             os.system("mpg321 response.mp3")  # 음성 파일 재생 (리눅스/macOS)
             text = recognize_speech()
-            if text and "약추가" in text:
+            if text and ("약추가" in text or "약 추가" in text):
                 print("약추가 워드 감지! 시스템 활성화...")
                 response_text = "약정보를 추가합니다."
                 text_to_speech(response_text, "response1.mp3")
                 os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)
                 break
-            if text and "약 추가" in text:
-                print("약추가 워드 감지! 시스템 활성화...")
-                response_text = "약정보를 추가합니다."
-                text_to_speech(response_text, "response1.mp3")
-                os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)
-                break
-            if text and "약 삭제" in text:
+            
+            if text and ("약 삭제" in text or "약삭제" in text):
                 print("약삭제 워드 감지! 시스템 활성화...")
                 response_text = "약정보를 삭제합니다."
                 text_to_speech(response_text, "response1.mp3")
                 os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)
                 break
-            if text and "약 삭제" in text:
-                print("약삭제 워드 감지! 시스템 활성화...")
-                response_text = "약정보를 삭제합니다."
-                text_to_speech(response_text, "response1.mp3")
-                os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)    
-                break
+
 # 실행
 if __name__ == "__main__":
     wake_word_detection()
