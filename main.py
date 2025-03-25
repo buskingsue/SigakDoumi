@@ -1,4 +1,6 @@
 
+# main.py
+
 import serial
 from tts import text_to_speech
 from stt import record_and_recognize  # Import our new convenience function
@@ -21,11 +23,15 @@ from medication_db import (
 #구글 인증 파일 읽기
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
 
-#stm32로부터 시리얼 신호 받을 객체
-ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+
+def get_serial():
+    # stm32로부터 시리얼 신호 받을 객체, 다만 초기에 init하지 않고 stanby()에서 대기 할때만 실행시킴
+    # 이렇게 구성하지 않으면 pytest 진행 불가
+    return serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
 
 
 def standby():
+    ser = get_serial()  #시리얼 통신 열기
     while(true):
         #메인 기능 시작: USB로 신호 기다리기        
         if ser.in_waiting > 0:

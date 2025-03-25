@@ -5,7 +5,7 @@ import pytest
 
 # 더미 stm32값을 가지고 main.py를 테스트 해보는 파일
 # 이하 부분은 main.py에서 필요한 기능만 import 한 후 pytest 형식으로 알맞게 수정하여 테스트 진행할것
-from main import *  # main.py 전부다 가져오기
+from main import react_to_event  
 from dummy_serial import DummySerial
 
 # 더미 호출할 함수 리스트 선언
@@ -30,17 +30,26 @@ def dummy_take_medicine(socket):
 @pytest.fixture
 def setup_dummy(monkeypatch):
     
-    # 원터치 버튼 눌림
-    dummy_events = [b'O']
+    # 1.원터치 버튼 눌렸을때 더미 테스트
+    # dummy_events = [b'O']
+
+    # 2.물음표 버튼 눌렸을때 더미 테스트
+    # dummy_events = [b'Q']
+    
+    # 3.소켓 번호 버튼 눌렸을때 더미 테스트 (예:1번소켓 버튼)
+    # dummy_events = [b'1']
+
+    # 4.소켓 센서 상태 변화되었을때 더미 테스트 (예:3번소켓 센서)
+    dummy_events = [b'C']
+
     dummy_ser = DummySerial(dummy_events)
     
-
-    # Patch the global 'ser' variable in your module with dummy_ser.
-    # 시리얼 신호를 의미하는 ser 변수를 dummy_ser로 대체하여 테스트 진행하도록 설정
-
-    monkeypatch.setattr('main.ser', dummy_ser)
+    # Patch get_serial so that standby() uses the dummy serial object.
+    # get_serial 함수가 호출되었을때, dummy_ser을 통해서 dummy_event 신호비트 발생
+    monkeypatch.setattr('main.get_serial', lambda: dummy_ser)
     
-    # Patch functions so we can record which ones get called
+    # 더미신호가 발생되었을때 main.py에서 조건에 맞는 함수가 호출되는지 체크할수 있도록
+    # 더미함수들과 연결해주는 매칭 코드
     monkeypatch.setattr('main.press_button', dummy_press_button)
     monkeypatch.setattr('main.main_function1', dummy_main_function1)
     monkeypatch.setattr('main.main_function2', dummy_main_function2)
@@ -80,7 +89,22 @@ def test_standby_processing(setup_dummy):
             dummy_take_medicine('C')
 
 
-    # 테스트 통과 조건 ('O' 버튼이 눌린 경우 main_function1 실행되어야 함)
+    
     assert called_functions == [
-        "main_function1"
+        # 1. 테스트 통과 조건 (스탠바이에서 'O' 버튼이 눌린 경우 main_function1 실행되어야 함)
+        # 테스트 통과 확인
+        # "main_function1"
+        
+        # 2. 테스트 통과 조건 (스탠바이에서 물음표 버튼이 눌린 경우 main_function2 실행되어야 함)
+        # 테스트 통과 확인
+        # "main_function2"
+
+        # 3. 테스트 통과 조건 (스탠바이에서 1 버튼이 눌린 경우 press_button 1실행되어야 함)
+        # 테스트 통과 확인
+        "press_button 1"
+
+        # 4. 테스트 통과 조건 (스탠바이에서 3소켓 센서상태 변경 경우 take_medicine C 실행되어야 함)
+        # 테스트 통과 확인
+        # "take_medicine C"
+
     ]
