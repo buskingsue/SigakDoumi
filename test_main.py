@@ -101,10 +101,10 @@ def test_standby_processing(setup_dummy):
 
         # 3. 테스트 통과 조건 (스탠바이에서 1 버튼이 눌린 경우 press_button 1실행되어야 함)
         # 테스트 통과 확인
-        "press_button 1"
+        # "press_button 1"
 
         # 4. 테스트 통과 조건 (스탠바이에서 3소켓 센서상태 변경 경우 take_medicine C 실행되어야 함)
         # 테스트 통과 확인
-        # "take_medicine C"
+        "take_medicine C"
 
     ]
