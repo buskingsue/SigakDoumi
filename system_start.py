@@ -79,25 +79,36 @@ def recognize_speech():
 def wake_word_detection():
     while True:
         text = recognize_speech()
-        if text and ("약손아" in text or "약 손아" in text or "약 소나" in text or "약손" in text):
+        if text and ("배고파" in text or "약 손아" in text or "약 소나" in text or "약손" in text):
             print("웨이크 워드 감지! 시스템 활성화...")
             response_text = "네, 무엇을 도와드릴까요?"
             text_to_speech(response_text, "response.mp3")
             os.system("mpg321 response.mp3")  # 음성 파일 재생 (리눅스/macOS)
             text = recognize_speech()
-            if text and ("약추가" in text or "약 추가" in text):
+        if text and ("약추가" in text or "약 추가" in text):
                 print("약추가 워드 감지! 시스템 활성화...")
                 response_text = "약정보를 추가합니다."
                 text_to_speech(response_text, "response1.mp3")
                 os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)
-                break
-            
-            if text and ("약 삭제" in text or "약삭제" in text):
+                break    
+        if text and ("약 삭제" in text or "약삭제" in text):
                 print("약삭제 워드 감지! 시스템 활성화...")
-                response_text = "약정보를 삭제합니다."
+                response_text = "약정보를 삭제합니다.몇 번 소켓의 약을 삭제 하시겠습니까?"
                 text_to_speech(response_text, "response1.mp3")
                 os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)
-                break
+        if text and ("일번" in text or "1번" in text or "일 번" in text or "1 번" in text):
+            print("1번 소켓의 약 삭제")
+            response_text = "1번 소켓의 약을 삭제합니다."
+            text_to_speech(response_text, "response1.mp3")
+            os.system("mpg321 response1.mp3")
+            break  
+        if text and ("시스템 종료" in text or "시스템 종료" in text):
+                print("시스템 종료 워드 감지! 시스템 종료...")
+                response_text = "시스템을 종료합니다."
+                text_to_speech(response_text, "response1.mp3")
+                os.system("mpg321 response1.mp3")  # 음성 파일 재생 (리눅스/macOS)
+                break           
+            
 
 # 실행
 if __name__ == "__main__":
