@@ -1,3 +1,5 @@
+# camera.py
+
 import cv2
 
 def init_camera():

@@ -1,3 +1,4 @@
+# medication_db.py
 import sqlite3
 from contextlib import closing
 
@@ -7,6 +8,8 @@ DB_NAME = "medications.db"
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
         with closing(conn.cursor()) as cursor:
+
+            # 약섭취 스케쥴 테이블
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS medication_schedule (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,6 +20,8 @@ def init_db():
                     dinner BOOLEAN DEFAULT 0
                 )
             ''')
+
+            # 약섭취 여부 테이블
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS medication_status (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,6 +30,14 @@ def init_db():
                     morning BOOLEAN DEFAULT 0,
                     lunch BOOLEAN DEFAULT 0,
                     dinner BOOLEAN DEFAULT 0
+                )
+            ''')
+
+            # 물품 보관 테이블 생성
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS socket_contents (
+                    socket TEXT PRIMARY KEY,
+                    name TEXT NOT NULL
                 )
             ''')
             conn.commit()
@@ -109,3 +122,25 @@ def get_all_statuses():
         with closing(conn.cursor()) as cursor:
             cursor.execute('SELECT * FROM medication_status')
             return cursor.fetchall()
+
+# 소켓 정보 추가
+def add_socket_content(socket, name):
+    with sqlite3.connect(DB_NAME) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute('INSERT INTO socket_contents (socket, name) VALUES (?, ?)', (socket, name))
+            conn.commit()
+
+# 소켓 정보 삭제
+def delete_socket_content(socket):
+    with sqlite3.connect(DB_NAME) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute('DELETE FROM socket_contents WHERE socket = ?', (socket,))
+            conn.commit()
+
+# 소켓 정보 조회
+def get_socket_content(socket):
+    with sqlite3.connect(DB_NAME) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute('SELECT name FROM socket_contents WHERE socket = ?', (socket,))
+            result = cursor.fetchone()
+            return result[0] if result else None
