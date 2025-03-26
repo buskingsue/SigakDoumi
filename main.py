@@ -129,7 +129,7 @@ def add_medicine():
     text = "약 정보 메모지를 스테이지에 올려놓으신 후 원터치 버튼을 눌러주세요. 취소하시려면 물음표 버튼을 눌러주세요"
     text_to_speech(text, "output.mp3")
     try:
-        cap = init_camera()
+        # cap = init_camera()
         add_medicine_standby(cap)
         release_camera(cap)
     except RuntimeError as e:
@@ -164,6 +164,8 @@ def analyze_memo(cap):
     converter = MedicineScheduleConverter()
     converter.analyze_memo(cap)
 
+cap = 0
+
 def main():
     init_db()
     print("Medication database initialized.\n")
@@ -171,11 +173,7 @@ def main():
     print("Webcam initialized and ready.")
     # standby()
     # main_function1()
-    try:
-        analyze_memo(cap)
-        release_camera(cap)
-    except RuntimeError as e:
-        print("Warning: Webcam initialization failed:", e)
+    analyze_memo(cap)
     release_camera(cap)
 
 if __name__ == "__main__":
