@@ -48,6 +48,8 @@ def add_schedule(medicine, socket, morning=False, lunch=False, dinner=False):
         with closing(conn.cursor()) as cursor:
             cursor.execute('INSERT INTO medication_schedule (medicine, socket, morning, lunch, dinner) VALUES (?, ?, ?, ?, ?)',
                            (medicine, socket, morning, lunch, dinner))
+            cursor.execute('INSERT INTO medication_status (medicine, socket, morning, lunch, dinner) VALUES (?, ?, ?, ?, ?)',
+                           (medicine, socket, 0, 0, 0))
             conn.commit()
 
 # 약 스케쥴 수정 (사용 안할 수도 있음)
@@ -68,7 +70,7 @@ def update_schedule(med_id, morning=None, lunch=None, dinner=None):
             if not fields:
                 return
             values.append(med_id)
-            query = f'UPDATE medication_schedule SET {", ".join(fields)} WHERE id = ?'
+            query = f'UPDATE medication_schedule SET {", ".join(fields)} WHERE socket = ?'
             cursor.execute(query, values)
             conn.commit()
 
@@ -76,7 +78,9 @@ def update_schedule(med_id, morning=None, lunch=None, dinner=None):
 def delete_schedule(med_id):
     with sqlite3.connect(DB_NAME) as conn:
         with closing(conn.cursor()) as cursor:
-            cursor.execute('DELETE FROM medication_schedule WHERE id = ?', (med_id,))
+            cursor.execute('DELETE FROM medication_schedule WHERE socket = ?', (med_id,))
+            cursor.execute('DELETE FROM medication_status WHERE socket = ?', (med_id,))
+
             conn.commit()
 
 # 모든 스케쥴 출력
@@ -112,7 +116,7 @@ def update_status(med_id, morning=None, lunch=None, dinner=None):
             if not fields:
                 return
             values.append(med_id)
-            query = f'UPDATE medication_status SET {", ".join(fields)} WHERE id = ?'
+            query = f'UPDATE medication_status SET {", ".join(fields)} WHERE socket = ?'
             cursor.execute(query, values)
             conn.commit()
 

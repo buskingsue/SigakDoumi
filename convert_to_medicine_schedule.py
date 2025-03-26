@@ -1,5 +1,8 @@
+# convert_to_medicine_schedule.py
+
 from paddle_client import send_image_for_ocr
 from medication_db import add_schedule, get_all_schedules
+from speak import text_to_speech
 import time
 
 class MedicineScheduleConverter:
@@ -16,8 +19,15 @@ class MedicineScheduleConverter:
             print("이미지를 캡처하지 못했습니다.")
 
     def get_empty_socket(self):
+        """Returns the first socket ('1','2','3') that is not in use either by a medication schedule or a stored thing."""
+        used_sockets = set()
+        # Sockets used for medicine schedules.
         schedules = get_all_schedules()
-        used_sockets = {sched[2] for sched in schedules}
+        used_sockets.update({sched[2] for sched in schedules})
+        # Sockets used for things.
+        for sock in ['1', '2', '3']:
+            if get_socket_content(sock) is not None:
+                used_sockets.add(sock)
         for sock in ['1', '2', '3']:
             if sock not in used_sockets:
                 return sock
@@ -97,5 +107,10 @@ class MedicineScheduleConverter:
             if socket is None:
                 print(f"No available socket found for medicine: {medicine}. Skipping entry.")
                 continue
+
             add_schedule(medicine, socket, morning, lunch, dinner)
             print(f"Added schedule: {medicine}, socket: {socket}, morning: {morning}, lunch: {lunch}, dinner: {dinner}")
+
+            # Announce the addition via text-to-speech.
+            announcement = f"{medicine} 을 {socket}번 소켓 스케쥴에 추가하였습니다"
+            text_to_speech(announcement, "output.mp3")
