@@ -3,11 +3,12 @@ import requests
 from time import time
 
 # 서버 및 인증 설정
-PORT_N = 5051
+PORT_N = 5057
 SERVER_IP = "61.108.166.15"
 USER_ID = "team01"
 USER_PW = "1234"
-TEST_IMG = "test2.png"
+# TEST_IMG = "test2.png"
+TEST_IMG = "memo_image.jpg"
 
 # 요청 URL 생성
 url = f"http://{SERVER_IP}:{PORT_N}/ocr"
@@ -46,7 +47,9 @@ def send_image_for_ocr(image_path):
             response = requests.post(url, auth=auth, files=files)
 
         if response.status_code == 200:
-            return response.json().get("text", "")
+            #return response.json().get("text", "")
+            return response.json()["text"]
+        
         else:
             return f"Error {response.status_code}: {response.json()}"
     except Exception as e:

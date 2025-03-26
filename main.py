@@ -51,17 +51,14 @@ def standby():
             elif standby_change == 'C':
                 take_medicine('C')
 
-def add_medicine_standby():
+def add_medicine_standby(cap):
     ser = get_serial()
-    while(True):
+    while True:
         if ser.in_waiting > 0:
             event = ser.read(1)
             standby_change = react_to_event(event)
-
             if standby_change == 'O':
-                # 원터치 버튼 누르면 약 섭취 메모지 OCR 실행
-                analyze_memo()
-
+                analyze_memo(cap)
             elif standby_change == 'Q':
                 standby()
 
@@ -129,12 +126,14 @@ def main_function2():
 # 약 추가 함수
 def add_medicine():
     print("약추가 실행")
-    text = "약 정보 메모지를 스테이지에 올려놓으신 후 원터치 버튼을 눌러주세요. " \
-    "취소하시려면 물음표 버튼을 눌러주세요"
+    text = "약 정보 메모지를 스테이지에 올려놓으신 후 원터치 버튼을 눌러주세요. 취소하시려면 물음표 버튼을 눌러주세요"
     text_to_speech(text, "output.mp3")
-
-    add_medicine_standby()
-
+    try:
+        cap = init_camera()
+        add_medicine_standby(cap)
+        release_camera(cap)
+    except RuntimeError as e:
+        print("Warning: Webcam initialization failed:", e)
     return
 
 def delete_medicine():
@@ -161,9 +160,9 @@ def press_button(socket):
     print("소켓내용 설명 실행")
     return
 
-def analyze_memo():
+def analyze_memo(cap):
     converter = MedicineScheduleConverter()
-    converter.analyze_memo()
+    converter.analyze_memo(cap)
 
 def main():
     init_db()
@@ -171,7 +170,12 @@ def main():
     cap = init_camera()
     print("Webcam initialized and ready.")
     # standby()
-    main_function1()
+    # main_function1()
+    try:
+        analyze_memo(cap)
+        release_camera(cap)
+    except RuntimeError as e:
+        print("Warning: Webcam initialization failed:", e)
     release_camera(cap)
 
 if __name__ == "__main__":
