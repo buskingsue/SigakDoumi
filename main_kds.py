@@ -53,7 +53,7 @@ def analyze_thing_memo():
     # 추가 여부 질문
     ask_for_another_thing()
 
-def ask_for_another_thing():
+def add_thing_standby():
     """ 물건 추가 여부를 사용자에게 묻고 입력을 처리 """
     text_to_speech("물건을 추가하시겠습니까? 추가하시려면 원터치 버튼, 취소하시려면 물음표 버튼을 눌러주세요.", "ask_another.mp3")
     
@@ -84,7 +84,7 @@ def record_and_save_thing():
         text_to_speech("음성을 인식하지 못했습니다.", "speech_fail.mp3")
 
     # 다시 물건 추가 여부 질문 반복
-    ask_for_another_thing()
+    standby()
 
 def add_thing():
     """ 물건 추가 실행 함수: 음성 안내 후 대기 모드로 전환 """
