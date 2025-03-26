@@ -1,7 +1,7 @@
 # main.py
 
 import serial
-from tts import text_to_speech
+from speak import text_to_speech
 from stt import record_and_recognize
 from camera import init_camera, capture_image, release_camera
 from ocr import send_image_for_ocr  # New import
@@ -96,20 +96,25 @@ def react_to_event(event):
 
 def main_function1():
     text = "무엇을 도와드릴까요? 메뉴 설명을 들으시려면 물음표 버튼을 눌러주세요"
+    print(f"text: {text}")
     text_to_speech(text, "output.mp3")
+    
     recognized_text = record_and_recognize(duration=7, filename="recorded_audio.wav")
 
     if recognized_text:
-        print(f"Recognized Speech: {recognized_text}")
-        if recognized_text == "약추가":
+        # Normalize by removing all spaces
+        normalized_text = recognized_text.replace(" ", "")
+        print(f"Recognized Speech: {normalized_text}")
+        
+        if normalized_text == "약추가":
             add_medicine()
-        elif recognized_text == "약삭제":
+        elif normalized_text == "약삭제":
             delete_medicine()
-        elif recognized_text == "물건추가":
+        elif normalized_text == "물건추가":
             add_thing()
-        elif recognized_text == "물건삭제":
+        elif normalized_text == "물건삭제":
             delete_thing()
-        elif recognized_text == "물건묘사":
+        elif normalized_text == "물건묘사":
             describe_thing()
     else:
         print("No speech recognized.")
@@ -165,7 +170,8 @@ def main():
     print("Medication database initialized.\n")
     cap = init_camera()
     print("Webcam initialized and ready.")
-    standby()
+    # standby()
+    main_function1()
     release_camera(cap)
 
 if __name__ == "__main__":
