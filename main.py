@@ -214,6 +214,8 @@ def main_function1():
             add_medicine()
         elif normalized_text == "약삭제":
             delete_medicine()
+        elif normalized_text == "약스케쥴":
+            listen_medicine_schedule()
         elif normalized_text == "물건추가":
             add_thing()
         elif normalized_text == "물건삭제":
@@ -225,7 +227,7 @@ def main_function1():
     return
 
 def main_function2():
-    text = "메뉴는 다음과 같습니다. 약추가. 약삭제. 물품추가. 물품삭제. 물품묘사"
+    text = "메뉴는 다음과 같습니다. 약추가. 약삭제. 약스케쥴 설명. 물품추가. 물품삭제. 물품묘사"
     text_to_speech(text, "output.mp3")
     main_function1()    
     return
@@ -268,16 +270,75 @@ def delete_medicine():
             text_to_speech("3번", "output.mp3")
             delete_number = 3
         else:
-            text_to_speech("죄송합니다 소켓 번호를 인식하지 못했습니다", "output.mp3")
+            text_to_speech("죄송합니다. 소켓 번호를 인식하지 못했습니다.", "output.mp3")
             #다시 약삭제 함수 실행
             delete_medicine()
 
     # 여기에 딜레이를 넣어야할지 고민중
-    text = "소켓에서 약을 제거해 주신 후 원터치 버튼을 눌러주세요, 취소하시려면 물음표버튼을 눌러주세요"
+    text = "소켓에서 약을 제거해 주신 후 원터치 버튼을 눌러주세요. 취소하시려면 물음표버튼을 눌러주세요."
     text_to_speech(text, "output.mp3")
     delete_medicine_standby(delete_number) #이 함수에 딜리트 넘버를 넣음
 
     return
+
+def listen_medicine_schedule():
+    """
+    Retrieves the medication schedules and status from the database and
+    returns a descriptive string about which medicines (by socket) are scheduled
+    and which time slots have not been taken yet.
+    """
+    from medication_db import get_all_schedules, get_all_statuses
+
+    # Get all scheduled medications and their statuses.
+    schedules = get_all_schedules()   # Each record: (id, medicine, socket, morning, lunch, dinner)
+    statuses = get_all_statuses()       # Each record: (id, medicine, socket, morning, lunch, dinner)
+    
+    # Build a dictionary mapping socket to status record for easier lookup.
+    status_dict = {}
+    for stat in statuses:
+        # Assuming the tuple structure is: (id, medicine, socket, morning, lunch, dinner)
+        status_dict[stat[2]] = stat
+
+    messages = []
+    for sched in schedules:
+        socket = sched[2]
+        medicine = sched[1]
+        # Determine which time slots are scheduled.
+        scheduled_slots = []
+        if sched[3]:
+            scheduled_slots.append("아침")
+        if sched[4]:
+            scheduled_slots.append("점심")
+        if sched[5]:
+            scheduled_slots.append("저녁")
+        
+        # Check the corresponding status to see which slots remain not taken.
+        not_taken = []
+        stat = status_dict.get(socket)
+        if stat:
+            # Here, we assume that a value of 1 (or True) in the status means it has been taken.
+            # So if the schedule indicates a slot (e.g., sched[3] is True) but the status is 0, it's not taken.
+            if sched[3] and not stat[3]:
+                not_taken.append("아침")
+            if sched[4] and not stat[4]:
+                not_taken.append("점심")
+            if sched[5] and not stat[5]:
+                not_taken.append("저녁")
+        else:
+            # No status record found; assume none of the scheduled slots have been taken.
+            not_taken = scheduled_slots.copy()
+        
+        if not_taken:
+            slots_str = ", ".join(not_taken)
+            messages.append(f"{medicine} (소켓 {socket})은(는) {slots_str}에 복용 예정이나 아직 복용하지 않으셨습니다.")
+        else:
+            messages.append(f"{medicine} (소켓 {socket})은(는) 모두 복용하셨습니다.")
+    
+    if messages:
+        return " ".join(messages)
+    else:
+        return "현재 복용 예정인 약이 없습니다."
+
 
 def add_thing():
     print("물건추가 실행")
@@ -319,11 +380,84 @@ def delete_thing():
     return
 
 def take_medicine(socket):
+    """
+    Called when a sensor signal (e.g., b'A', b'B', b'C') is received.
+    Determines the current time slot and, if the medicine scheduled in the given socket
+    has that slot enabled, increments the corresponding counter and announces the event.
+    """
     print("약복용 실행")
-    return
+    now = datetime.datetime.now()
+    current_hour = now.hour
+    slot = None
+    # Define time ranges (adjust as needed)
+    if 6 <= current_hour < 11:
+        slot = "morning"
+    elif 11 <= current_hour < 16:
+        slot = "lunch"
+    elif 17 <= current_hour < 22:
+        slot = "dinner"
+    else:
+        # Default to morning if out of range
+        slot = "morning"
+
+    # Retrieve the medication schedule for this socket.
+    schedule = get_schedule_by_socket(socket)
+    if schedule is None:
+        text_to_speech("해당 소켓의 약 정보가 없습니다.", "output.mp3")
+        return
+
+    # The schedule record is assumed to be:
+    # (id, medicine, socket, morning, lunch, dinner)
+    medicine = schedule[1]  # medicine name
+    scheduled = False
+    if slot == "morning" and schedule[3]:
+        scheduled = True
+    elif slot == "lunch" and schedule[4]:
+        scheduled = True
+    elif slot == "dinner" and schedule[5]:
+        scheduled = True
+
+    if scheduled:
+        if increment_status_by_socket(socket, slot):
+            announcement = f"{medicine} 약을 복용하셨습니다"
+            text_to_speech(announcement, "output.mp3")
+        else:
+            text_to_speech("약 복용 처리에 실패하였습니다", "output.mp3")
+    else:
+        text_to_speech("현재 시간에 해당하는 복용 스케줄이 없습니다", "output.mp3")
 
 def press_button(socket):
-    print("소켓내용 설명 실행")
+    from medication_db import get_schedule_by_socket, get_socket_content
+    from speak import text_to_speech
+
+    # Look for a medicine schedule in the given socket.
+    schedule = get_schedule_by_socket(socket)
+    # Look for a stored thing in the given socket.
+    thing = get_socket_content(socket)
+
+    announcement = ""
+    if schedule:
+        # The schedule record is assumed to be: (id, medicine, socket, morning, lunch, dinner)
+        medicine = schedule[1]
+        time_slots = []
+        if schedule[3]:
+            time_slots.append("아침")
+        if schedule[4]:
+            time_slots.append("점심")
+        if schedule[5]:
+            time_slots.append("저녁")
+        if time_slots:
+            slots_str = ", ".join(time_slots)
+            announcement += f"소켓 {socket}에는 {medicine} 약이 있으며, {slots_str}에 섭취 예정입니다. "
+        else:
+            announcement += f"소켓 {socket}에는 {medicine} 약이 등록되어 있습니다. "
+    if thing:
+        announcement += f"{socket}번 소켓에는 {thing}가 보관되어 있습니다."
+    if not announcement:
+        announcement = f"소켓 {socket}은 비어있습니다."
+    
+    print("소켓내용 설명 실행:", announcement)
+    text_to_speech(announcement, "output.mp3")
     return
 
 # 빈 소켓을 찾는 함수
