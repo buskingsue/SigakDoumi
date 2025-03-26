@@ -33,7 +33,6 @@ class MedicineScheduleConverter:
         has_yak = False
         for token in tokens:
             if "약" in token:
-                # Remove all occurrences of "약" from this token
                 token_without_yak = token.replace("약", "")
                 if token_without_yak:
                     medicine_parts.append(token_without_yak)
@@ -59,8 +58,9 @@ class MedicineScheduleConverter:
             if not tokens:
                 continue
 
-            # Separate scheduling tokens from medicine tokens.
-            scheduling_keywords = ["아침", "점심", "저녁", "중식", "세번", "두번", "한번"]
+            # Define scheduling keywords that denote schedule-related information.
+            # Note that "하루" is included only to trigger scheduling extraction and will be ignored for naming.
+            scheduling_keywords = ["아침", "점심", "저녁", "중식", "세번", "두번", "한번", "하루", "서번"]
             scheduling_tokens = []
             medicine_tokens = []
             for token in tokens:
@@ -72,7 +72,8 @@ class MedicineScheduleConverter:
             # Process scheduling tokens for flags.
             morning = lunch = dinner = False
             for token in scheduling_tokens:
-                if "세번" or "서번" in token:
+                # If token contains "세번" or "서번", set all scheduling flags.
+                if "세번" in token or "서번" in token:
                     morning, lunch, dinner = True, True, True
                 elif "두번" in token:
                     morning, dinner = True, True
@@ -84,8 +85,9 @@ class MedicineScheduleConverter:
                     dinner = True
                 if "한번" in token and not (morning or lunch or dinner):
                     morning = True
+                # We ignore "하루" here as it is redundant.
 
-            # Combine medicine tokens into one name.
+            # Combine remaining tokens into the medicine name.
             medicine = MedicineScheduleConverter.process_medicine_tokens(medicine_tokens)
             if not medicine:
                 print("No medicine name detected. Skipping entry.")
