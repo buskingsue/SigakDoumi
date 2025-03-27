@@ -64,31 +64,32 @@ def add_medicine_standby():
 
             elif standby_change == 'Q':
                 standby()
-#===================================추가부분============================================        
-def delete_medicine_standby(a): ## a번 약을 제거하려고함함
+#========================================================================================================
+def delete_thing_standby(socket_num): ## a번 약을 제거하려고함
     ser = get_serial()
     while(True): # True가 어떤 역할인지? 신호를 받았을때 인지?
         if ser.in_waiting > 0: # 대기 시간?
             event = ser.read(1) #시리얼로 신호를 받을때
             standby_change = react_to_event(event)
 
-        if standby_change == '0':
-            text_to_speech("약을 제거합니다", "output.mp3")
+        if standby_change == 'O':
+            text_to_speech("물건정보를 제거 합니다", "output.mp3")
             #delete_schedule(str(a).encode()) # 엔코드가 b<-이거 붙여줌
             #약 스케줄 삭제 변수가 stm32 통신으로 받을 변수랑 똑같을 경우
 
-            delete_schedule(a) # 이거 데이터베이스 번호랑 맞춰줘야함
+            delete_socket_content(socket_num) # 이거 데이터베이스 번호랑 맞춰줘야함
 
             #딜레이 고민중
-            text_to_speech("처음으로 돌아갑니다", "output.mp3")
+            # text_to_speech("처음으로 돌아갑니다", "output.mp3")
+
             #딜레이 고민중
             standby() # 처음으로 돌아가는 함수
             
         if standby_change == 'Q':
-            text_to_speech("취소", "output.mp3")
+            text_to_speech("취소하였습니다.", "output.mp3")
             #딜레이 고민중
             standby() # 처음으로 돌아가는함수
-#===================================추가부분============================================     
+#========================================================================================================  
 def react_to_event(event): 
     if event == b'1':
         print("1번 소켓 버튼 눌림")
@@ -155,35 +156,68 @@ def add_medicine():
     add_medicine_standby()
 
     return
-#===================================추가부분============================================     
+#========================================================================================================
+# 약 삭제 함수
 def delete_medicine():
     print("약삭제 실행")
     text = "몇번 소켓의 약을 삭제 하시겠습니까?"
     text_to_speech(text, "output.mp3")
-    if react_to_event(b'0'): 
+    
+    #취소 누른 경우
+    if react_to_event(b'Q'): 
         standby()
+    #원터치 버튼 누른 경우
+
     #delete_medicine_standby() 스탠바이를 어떤 형식으로 써야하는지
     #번호를 누르면 그거에따라 번호누르는 신호가 와야함
     recognized_text = record_and_recognize(duration=7, filename="recorded_audio.wav")
     
     if recognized_text:
         print(f"Recognized Speech: {recognized_text}")
-    if recognized_text == "일번":
-        text_to_speech("1번", "output.mp3")
-        delete_number = 1
-    elif recognized_text == "이번":
-        text_to_speech("2번", "output.mp3")
-        delete_number = 2
-    elif recognized_text == "삼삼번":
-        text_to_speech("3번", "output.mp3")
-        delete_number = 3
+        
+        if recognized_text == "일번" or "1번" or "일본" or "일변":
+            text_to_speech("1번", "output.mp3")
+            delete_number = 1
+        elif recognized_text == "이번" or "2번" or "이본" or "이변" or "이번에" or "이번것":
+            text_to_speech("2번", "output.mp3")
+            delete_number = 2
+        elif recognized_text == "삼번" or "3번" or "삼본" or "산번" or "산본":
+            text_to_speech("3번", "output.mp3")
+            delete_number = 3
+        else: 
+            text_to_speech("인식하지 못했습니다, 다시 말씀해주세요", "output.mp3")
+            if recognized_text == "일번" or "1번" or "일본" or "일변":
+                text_to_speech("1번", "output.mp3")
+                delete_number = 1
+            elif recognized_text == "이번" or "2번" or "이본" or "이변" or "이번에" or "이번것":
+                text_to_speech("2번", "output.mp3")
+                delete_number = 2
+            elif recognized_text == "삼번" or "3번" or "삼본" or "산번" or "산본":
+                text_to_speech("3번", "output.mp3")
+                delete_number = 3
+            else: 
+                text_to_speech("인식하지 못했습니다, 다시 말씀해주세요", "output.mp3")
+                #다시 약삭제 함수 실행
+                delete_medicine()
 
     # 여기에 딜레이를 넣어야할지 고민중
-    text = "약을 제거해 주신 후 원터치 버튼을 눌러주세요, 취소하시려면 물음표버튼을 눌러주세요"
+    text = "소켓에서 약을 제거해 주신 후 원터치 버튼을 눌러주세요, 취소하시려면 물음표버튼을 눌러주세요"
     text_to_speech(text, "output.mp3")
-    delete_medicine_standby(delete_number) #이 함수에 딜리트 넘버를 넣음
+    if react_to_event(b'O'):
+        delete_thing_standby(delete_number) #이 함수에 딜리트 넘버를 넣음
+        #if react_to_event(b'센서 작동하지지 않으면')( 약통 센서에 아무것도 없으면 약을 제거 해주세요 라는 말 출력) 
+        text = "약을 제거해 주신 후 원터치 버튼을 누르셔야 합니다"
+        text_to_speech(text, "output.mp3")
+         #if react_to_event(b'센서 작동되면')
+        # 다시 상위로 돌아가게게
 
-#===================================추가부분============================================     
+    elif react_to_event(b'Q'): 
+        standby()
+    
+
+
+    return
+#======================================================================================================== 
 
 def take_medicine(socket):
     print("약복용 실행")
