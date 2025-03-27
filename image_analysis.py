@@ -84,8 +84,8 @@ def capture_image_for_analysis(cap):
         return None
 
     # Define the crop box (ROI) coordinates similar to paddle_client.py
-    start_x, start_y = 170, 150
-    box_width, box_height = 600, 500
+    start_x, start_y = 570, 150
+    box_width, box_height = 800, 700
     end_x, end_y = start_x + box_width, start_y + box_height
     roi = frame[start_y:end_y, start_x:end_x]
     

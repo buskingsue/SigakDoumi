@@ -203,7 +203,7 @@ def main():
 
     # Define the crop box (ROI) coordinates
     box_width, box_height = 600, 500  # Target area dimensions
-    start_x = 170
+    start_x = 370
     start_y = 150
     end_x = start_x + box_width
     end_y = start_y + box_height

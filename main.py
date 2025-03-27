@@ -534,10 +534,10 @@ def main():
     print("Medication database initialized.\n")
     cap = init_camera()
     print("Webcam initialized and ready.")
-    standby()
+    # standby()
     # main_function1()
     # analyze_memo(cap)
-    # capture_image(cap)
+    capture_image(cap)
 
     release_camera(cap)
 
