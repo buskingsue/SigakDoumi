@@ -23,6 +23,7 @@ proto-plus==1.26.1
 protobuf==5.29.4
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
+PyAudio==0.2.14
 pycparser==2.22
 pydub==0.25.1
 pytest==8.3.5
@@ -33,5 +34,7 @@ scipy==1.15.2
 serial==0.0.97
 sounddevice==0.5.1
 soundfile==0.13.1
+SpeechRecognition==3.14.2
 tomli==2.2.1
+typing_extensions==4.13.0
 urllib3==2.3.0
