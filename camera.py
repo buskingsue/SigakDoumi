@@ -15,14 +15,23 @@ def capture_image(cap, save_path="memo_image.jpg"):
     Press 's' to capture the processed ROI image or 'q' to cancel.
     """
     print("Press 's' to capture an image, or 'q' to cancel.")
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 4096)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 2160)
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 4096)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 2160)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
 
     # Define ROI coordinates (modify these values as needed)
-    box_width, box_height = 800, 650  # Target area dimensions
-    start_x, start_y = 300, 100       # Starting coordinates of ROI
-    end_x = start_x + box_width
-    end_y = start_y + box_height
+    # box_width, box_height = 800, 650  # Target area dimensions
+    # start_x, start_y = 300, 100       # Starting coordinates of ROI
+    # end_x = start_x + box_width
+    # end_y = start_y + box_height
+
+        # Define the crop box (ROI) coordinates
+    start_x, start_y = 170, 150
+    box_width, box_height = 600, 500
+    end_x, end_y = start_x + box_width, start_y + box_height
+    # roi = frame[start_y:end_y, start_x:end_x]
 
     # Create a window for settings and add trackbars for real-time adjustment
     cv2.namedWindow("Settings")
