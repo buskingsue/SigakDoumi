@@ -7,7 +7,7 @@ from camera import init_camera, capture_image, release_camera
 from ocr import send_image_for_ocr  # New import
 import os
 import time
-from image_analysis import analyze_thing
+# from image_analysis import analyze_thing
 from convert_to_medicine_schedule import MedicineScheduleConverter
 from medication_db import (
     init_db,
@@ -513,7 +513,9 @@ def main():
     standby()
     # main_function1()
     # analyze_memo(cap)
-    release_camera()
+    # capture_image(cap)
+
+    release_camera(cap)
 
 if __name__ == "__main__":
     main()
