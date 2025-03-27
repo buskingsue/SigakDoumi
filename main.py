@@ -210,18 +210,16 @@ def main_function1():
         normalized_text = recognized_text.replace(" ", "")
         print(f"Recognized Speech: {normalized_text}")
         
-        if normalized_text == "약추가":
-            add_medicine()
-        elif normalized_text == "약삭제":
-            delete_medicine()
-        elif normalized_text == "약스케쥴":
-            listen_medicine_schedule()
-        elif normalized_text == "물건추가":
-            add_thing()
-        elif normalized_text == "물건삭제":
-            delete_thing()
-        elif normalized_text == "물건묘사":
-            describe_thing()
+    if normalized_text == "약추가" or normalized_text == "역추가":
+        add_medicine()
+    elif normalized_text == "약삭제" or normalized_text == "역삭제":
+        delete_medicine()
+    elif normalized_text == "약스케쥴" or normalized_text == "역스케쥴":
+        listen_medicine_schedule()
+    elif normalized_text == "물건추가" or normalized_text == "물품추가":
+        add_thing()
+    elif normalized_text == "물건삭제" or normalized_text == "물품삭제":
+        delete_thing()
     else:
         print("No speech recognized.")
     return
