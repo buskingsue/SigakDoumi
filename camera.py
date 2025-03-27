@@ -1,11 +1,17 @@
 import cv2
 import numpy as np
+import time
 
 def init_camera():
-    """Initializes and returns a persistent webcam capture object."""
-    cap = cv2.VideoCapture(0)  # Open the webcam (adjust the index if needed)
+    # Try the default index first.
+    cap = cv2.VideoCapture(0)
+    time.sleep(1)  # Allow time for the camera to initialize
     if not cap.isOpened():
-        raise RuntimeError("Cannot open webcam")
+         # Try an alternative index if the first one fails.
+         cap = cv2.VideoCapture(1)
+         time.sleep(1)
+    if not cap.isOpened():
+         raise RuntimeError("Cannot open webcam")
     return cap
 
 def capture_image(cap, save_path="memo_image.jpg"):

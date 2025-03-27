@@ -6,8 +6,8 @@ from stt import record_and_recognize
 from camera import init_camera, capture_image, release_camera
 from ocr import send_image_for_ocr  # New import
 import os
-import time
-# from image_analysis import analyze_thing
+import time, datetime
+from image_analysis import analyze_thing
 from convert_to_medicine_schedule import MedicineScheduleConverter
 from medication_db import (
     init_db,
@@ -20,7 +20,10 @@ from medication_db import (
     get_all_statuses,
     add_socket_content,
     delete_socket_content,
-    get_socket_content
+    get_socket_content,
+    get_schedule_by_socket,
+    increment_status_by_socket
+    
 )
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
@@ -32,25 +35,37 @@ cap = None
 #     return serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
 
 # Dummy get_serial to simulate UART signals via keyboard input.
+# def get_serial():
+#     class DummySerial:
+#         @property
+#         def in_waiting(self):
+#             # Always return 1, indicating there is user input waiting.
+#             return 1
+
+#         def read(self, size):
+#             # Prompt the user to enter a simulated UART signal.
+#             user_input = input("Simulated UART input (enter one character): ")
+#             if user_input:
+#                 # Return the first character as bytes.
+#                 return user_input[0].encode()
+#             else:
+#                 return b''
+#     return DummySerial()
+
 def get_serial():
-    class DummySerial:
-        @property
-        def in_waiting(self):
-            # Always return 1, indicating there is user input waiting.
-            return 1
+    ser = serial.Serial(
+        port='/dev/ttyACM0',  # ST-LINK VCP port
+        baudrate=115200,      # Baud rate (must match STM32 setting)
+        timeout=1             # Read timeout (seconds)
+    )
 
-        def read(self, size):
-            # Prompt the user to enter a simulated UART signal.
-            user_input = input("Simulated UART input (enter one character): ")
-            if user_input:
-                # Return the first character as bytes.
-                return user_input[0].encode()
-            else:
-                return b''
-    return DummySerial()
-
+    print("Waiting for data from STM32...")
+    print("Displaying data for 5 buttons (A, B, C, Q, O) and 3 IR sensors (1, 2, 3).")
+    print("Press Ctrl+C to exit.\n")
+    return ser
 
 def standby():
+    print("main stanby entered...")
     ser = get_serial()
     while(True):
         if ser.in_waiting > 0:
@@ -147,7 +162,7 @@ def add_thing_standby_one():
                 text_to_speech("메뉴로 돌아갑니다.", "output.mp3")
                 standby()
             elif standby_change == 'O':  # 원터치 버튼 → 음성 인식 실행
-                analyze_thing()
+                analyze_thing(cap)
                 text_to_speech("이 물품을 보관하시겠습니까? 보관하시려면 원터치버튼을, 취소하시려면 물음표 버튼을 눌러주세요.", "output.mp3")
                 add_thing_standby_two()
                 
@@ -202,15 +217,15 @@ def main_function1():
     text = "무엇을 도와드릴까요? 메뉴 설명을 들으시려면 물음표 버튼을 눌러주세요"
     print(f"text: {text}")
     text_to_speech(text, "output.mp3")
-    
+    normalized_text = ""
     recognized_text = record_and_recognize(duration=7, filename="recorded_audio.wav")
-
+    
     if recognized_text:
         # Normalize by removing all spaces
         normalized_text = recognized_text.replace(" ", "")
         print(f"Recognized Speech: {normalized_text}")
         
-    if normalized_text == "약추가" or normalized_text == "역추가":
+    if normalized_text == "약추가" or normalized_text == "역추가" or normalized_text == "약초가" or normalized_text == "역초가":
         add_medicine()
     elif normalized_text == "약삭제" or normalized_text == "역삭제":
         delete_medicine()
@@ -377,13 +392,19 @@ def delete_thing():
 
     return
 
-def take_medicine(socket):
+def take_medicine(sensor):
     """
     Called when a sensor signal (e.g., b'A', b'B', b'C') is received.
-    Determines the current time slot and, if the medicine scheduled in the given socket
+    Determines the current time slot and, if the medicine scheduled in the corresponding socket
     has that slot enabled, increments the corresponding counter and announces the event.
+    If there's no medicine schedule but a thing is stored, it announces that the socket contains that thing.
+    If neither exists, it announces that the socket is empty.
     """
     print("약복용 실행")
+    # Map sensor signals to socket numbers.
+    sensor_to_socket = {'A': '1', 'B': '2', 'C': '3'}
+    socket = sensor_to_socket.get(sensor, sensor)  # Default to sensor if mapping not found
+
     now = datetime.datetime.now()
     current_hour = now.hour
     slot = None
@@ -401,7 +422,12 @@ def take_medicine(socket):
     # Retrieve the medication schedule for this socket.
     schedule = get_schedule_by_socket(socket)
     if schedule is None:
-        text_to_speech("해당 소켓의 약 정보가 없습니다.", "output.mp3")
+        # No medicine schedule exists. Check if a thing is stored.
+        thing = get_socket_content(socket)
+        if thing:
+            text_to_speech(f"{thing} 물품입니다.", "output.mp3")
+        else:
+            text_to_speech("해당 소켓은 비어있습니다", "output.mp3")
         return
 
     # The schedule record is assumed to be:
@@ -420,7 +446,7 @@ def take_medicine(socket):
             announcement = f"{medicine} 약을 복용하셨습니다"
             text_to_speech(announcement, "output.mp3")
         else:
-            text_to_speech("약 복용 처리에 실패하였습니다", "output.mp3")
+            text_to_speech("약을 이미 복용하셨습니다.", "output.mp3")
     else:
         text_to_speech("현재 시간에 해당하는 복용 스케줄이 없습니다", "output.mp3")
 
@@ -446,11 +472,11 @@ def press_button(socket):
             time_slots.append("저녁")
         if time_slots:
             slots_str = ", ".join(time_slots)
-            announcement += f"소켓 {socket}에는 {medicine} 약이 있으며, {slots_str}에 섭취 예정입니다. "
+            announcement += f"소켓 {socket}에는 {medicine} 복용약이 있으며, {slots_str}에 섭취 예정입니다. "
         else:
-            announcement += f"소켓 {socket}에는 {medicine} 약이 등록되어 있습니다. "
+            announcement += f"소켓 {socket}에는 {medicine} 복용약이 있습니다. "
     if thing:
-        announcement += f"{socket}번 소켓에는 {thing}가 보관되어 있습니다."
+        announcement += f"{socket}번 소켓에는 {thing} 물건이 보관되어 있습니다."
     if not announcement:
         announcement = f"소켓 {socket}은 비어있습니다."
     
@@ -482,7 +508,7 @@ def record_and_save_thing():
             text_to_speech("빈 소켓이 없습니다.", "output.mp3")
         else:
             add_socket_content(empty_socket, recognized_text)  # Save into the chosen socket.
-            announcement = f"{recognized_text}가 {empty_socket}번 소켓에 보관 되었습니다."
+            announcement = f"{recognized_text} 물건이이 {empty_socket}번 소켓에 보관 되었습니다."
             text_to_speech(announcement, "output.mp3")
     else:
         text_to_speech("음성을 인식하지 못했습니다.", "output.mp3")

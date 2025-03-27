@@ -1,6 +1,7 @@
 import cv2
 import base64
 from openai import OpenAI
+from speak import text_to_speech  # Ensure this import matches your project structure
 
 def read_api_key(file_path="api_gpt.txt"):
     """Read the API key from a file."""
@@ -50,7 +51,7 @@ def analyze_image(processed_image):
                     "content": [
                         {
                             "type": "text",
-                            "text": "첨부된 이미지는 약 정보야. 이것들이 어떤 약인지, 어떤 질병에 먹는 약인지 알려줘 "
+                            "text": "첨부된 이미지가 어떤 물건인지 설명해줘. 만일 물건이 아니라 약 정보라면 어떤 질병에 먹는 약인지 알려줘. 한국어로 3문장 정도로 간단히 설명해줘 "
                         },
                         {
                             "type": "image_url",
@@ -66,12 +67,55 @@ def analyze_image(processed_image):
         print(f"Error during API call: {e}")
         return None
 
-if __name__ == "__main__":
-    # For standalone testing, load an image file named 'captured_image.jpg'
-    test_image = cv2.imread("captured_image.jpg")
-    if test_image is not None:
-        result = analyze_image(test_image)
-        print("ChatGPT Analysis:")
-        print(result)
+def capture_image_for_analysis(cap):
+    """
+    Captures one frame from the webcam, sets a high resolution,
+    crops the region of interest (ROI), and returns the cropped image.
+    """
+
+    # Set high resolution for better detail
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    
+    ret, frame = cap.read()
+    cap.release()
+    if not ret:
+        print("Failed to capture frame from camera")
+        return None
+
+    # Define the crop box (ROI) coordinates similar to paddle_client.py
+    start_x, start_y = 170, 150
+    box_width, box_height = 600, 500
+    end_x, end_y = start_x + box_width, start_y + box_height
+    roi = frame[start_y:end_y, start_x:end_x]
+    
+    return roi
+
+def analyze_thing(cap):
+    """
+    Captures an image from the webcam, analyzes it using ChatGPT via analyze_image,
+    preprocesses the resulting text by removing all symbols, and then speaks the result using text_to_speech.
+    """
+    processed_image = capture_image_for_analysis(cap)
+    if processed_image is None:
+        print("Failed to capture image for analysis.")
+        return
+
+    analysis = analyze_image(processed_image)
+    if analysis:
+        # Preprocess the analysis text: remove all symbols, keeping only alphanumeric characters and whitespace.
+        cleaned_analysis = ''.join(ch for ch in analysis if ch.isalnum() or ch.isspace() or ch == '.')
+        print("ChatGPT Analysis (cleaned):")
+        print(cleaned_analysis)
+        text_to_speech(cleaned_analysis, "output.mp3")
     else:
-        print("Test image not found.")
+        print("Image analysis failed.")
+    return
+
+if __name__ == "__main__":
+    # Standalone test: initialize camera, capture image, and analyze it.
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Cannot open webcam")
+    else:
+        analyze_thing(cap)

@@ -74,6 +74,35 @@ def update_schedule(med_id, morning=None, lunch=None, dinner=None):
             cursor.execute(query, values)
             conn.commit()
 
+def increment_status_by_socket(socket, slot):
+    """
+    Updates the medication_status table by marking the specified time slot (morning, lunch, or dinner)
+    as taken (setting the value to 1) for the given socket.
+    Returns True if the update was successful, False otherwise.
+    """
+    with sqlite3.connect(DB_NAME) as conn:
+        with closing(conn.cursor()) as cursor:
+            # First, fetch the current status for the given socket.
+            cursor.execute('SELECT * FROM medication_status WHERE socket = ?', (socket,))
+            result = cursor.fetchone()
+            if result is None:
+                return False  # No status record exists for this socket.
+
+            # Depending on the slot, update the corresponding column if it hasn't been marked yet.
+            if slot == "morning" and not result[3]:
+                cursor.execute('UPDATE medication_status SET morning = 1 WHERE socket = ?', (socket,))
+            elif slot == "lunch" and not result[4]:
+                cursor.execute('UPDATE medication_status SET lunch = 1 WHERE socket = ?', (socket,))
+            elif slot == "dinner" and not result[5]:
+                cursor.execute('UPDATE medication_status SET dinner = 1 WHERE socket = ?', (socket,))
+            else:
+                # Slot already marked or slot name invalid.
+                return False
+
+            conn.commit()
+            return True
+
+
 # 약 스케쥴 삭제
 def delete_schedule(med_id):
     with sqlite3.connect(DB_NAME) as conn:
@@ -148,3 +177,9 @@ def get_socket_content(socket):
             cursor.execute('SELECT name FROM socket_contents WHERE socket = ?', (socket,))
             result = cursor.fetchone()
             return result[0] if result else None
+        
+def get_schedule_by_socket(socket):
+    with sqlite3.connect(DB_NAME) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute('SELECT * FROM medication_schedule WHERE socket = ?', (socket,))
+            return cursor.fetchone()

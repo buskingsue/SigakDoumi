@@ -30,6 +30,8 @@ def send_image_for_ocr(cap):
     end_x, end_y = start_x + box_width, start_y + box_height
     roi = frame[start_y:end_y, start_x:end_x]
 
+
+
     # Encode ROI as JPEG in memory
     ret2, buffer = cv2.imencode('.jpg', roi)
     if not ret2:

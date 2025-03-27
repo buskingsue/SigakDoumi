@@ -22,8 +22,10 @@ def bandpass_filter(audio_data, rate, lowcut, highcut):
     return signal.lfilter(b, a, audio_data)
 
 def text_to_speech(text, filename="output.mp3"):
+    print("speech to text entered..")
     # Initialize the Text-to-Speech client
     client = texttospeech.TextToSpeechClient()
+    print("speech to text Initialized..")
 
     # Configure the voice parameters (Korean, female, Wavenet)
     voice = texttospeech.VoiceSelectionParams(

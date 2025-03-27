@@ -106,6 +106,7 @@ class MedicineScheduleConverter:
             socket = self.get_empty_socket()
             if socket is None:
                 print(f"No available socket found for medicine: {medicine}. Skipping entry.")
+                text_to_speech("사용가능한 소켓이 없습니다. 먼저 약제거나 물건제거 메뉴를 통해 제거해주시고 다시시도해주세요", "output.mp3")
                 continue
 
             add_schedule(medicine, socket, morning, lunch, dinner)
