@@ -1,7 +1,7 @@
 # convert_to_medicine_schedule.py
 
 from paddle_client import send_image_for_ocr
-from medication_db import add_schedule, get_all_schedules
+from medication_db import add_schedule, get_all_schedules, get_socket_content
 from speak import text_to_speech
 import time
 
