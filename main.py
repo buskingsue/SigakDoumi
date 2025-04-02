@@ -7,23 +7,15 @@ from camera import init_camera, capture_image, release_camera
 from ocr import send_image_for_ocr  # New import
 import os
 import time, datetime
+from chat import send_to_fastapi  # Import send_to_fastapi from chat.py
+from wake_word_detector import WakeWordDetector
+
+from threading import Thread
 from image_analysis import analyze_thing
-from convert_to_medicine_schedule import MedicineScheduleConverter
 from medication_db import (
     init_db,
-    add_schedule,
-    update_schedule,
-    delete_schedule,
-    get_all_schedules,
-    add_status,
-    update_status,
-    get_all_statuses,
-    add_socket_content,
-    delete_socket_content,
-    get_socket_content,
-    get_schedule_by_socket,
-    increment_status_by_socket
-    
+    get_cabinet_by_box_num,
+    update_cabinet
 )
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
@@ -31,10 +23,7 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
 # 카메라 인스턴스 전역으로 선언
 cap = None
 
-# def get_serial():
-#     return serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-
-# Dummy get_serial to simulate UART signals via keyboard input.
+#Dummy get_serial to simulate UART signals via keyboard input.
 # def get_serial():
 #     class DummySerial:
 #         @property
@@ -51,6 +40,9 @@ cap = None
 #             else:
 #                 return b''
 #     return DummySerial()
+
+# 버튼과 센서 쿨 타임 계산할 시간 기준
+last_event_time = {}
 
 def get_serial():
     ser = serial.Serial(
@@ -78,10 +70,6 @@ def standby():
                 press_button('2')
             elif standby_change == '3':
                 press_button('3')
-            elif standby_change == 'O':
-                main_function1()
-            elif standby_change == 'Q':
-                main_function2()
             elif standby_change == 'A':
                 take_medicine('A')
             elif standby_change == 'B':
@@ -89,102 +77,16 @@ def standby():
             elif standby_change == 'C':
                 take_medicine('C')
 
-def add_medicine_standby():
-    ser = get_serial()
-    while True:
-        if ser.in_waiting > 0:
-            event = ser.read(1)
-            standby_change = react_to_event(event)
-            if standby_change == 'O':
-                analyze_memo()
-            elif standby_change == 'Q':
-                standby()
-
-def delete_medicine_standby(socket_num): ## a번 약을 제거하려고함함
-    ser = get_serial()
-    while(True): # True가 어떤 역할인지? 신호를 받았을때 인지?
-        if ser.in_waiting > 0: # 대기 시간?
-            event = ser.read(1) #시리얼로 신호를 받을때
-            standby_change = react_to_event(event)
-
-        if standby_change == 'O':
-            text_to_speech("약을 스케쥴에서 제거 합니다", "output.mp3")
-            #delete_schedule(str(a).encode()) # 엔코드가 b<-이거 붙여줌
-            #약 스케줄 삭제 변수가 stm32 통신으로 받을 변수랑 똑같을 경우
-
-            delete_schedule(socket_num) # 이거 데이터베이스 번호랑 맞춰줘야함
-
-            #딜레이 고민중
-            # text_to_speech("처음으로 돌아갑니다", "output.mp3")
-
-            #딜레이 고민중
-            standby() # 처음으로 돌아가는 함수
-            
-        if standby_change == 'Q':
-            text_to_speech("취소하였습니다.", "output.mp3")
-            #딜레이 고민중
-            standby() # 처음으로 돌아가는함수
-
-def delete_thing_standby(socket_num): ## a번 약을 제거하려고함함
-    ser = get_serial()
-    while(True): # True가 어떤 역할인지? 신호를 받았을때 인지?
-        if ser.in_waiting > 0: # 대기 시간?
-            event = ser.read(1) #시리얼로 신호를 받을때
-            standby_change = react_to_event(event)
-
-        if standby_change == 'O':
-            text_to_speech("물건정보를 제거 합니다", "output.mp3")
-            #delete_schedule(str(a).encode()) # 엔코드가 b<-이거 붙여줌
-            #약 스케줄 삭제 변수가 stm32 통신으로 받을 변수랑 똑같을 경우
-
-            delete_socket_content(socket_num) # 이거 데이터베이스 번호랑 맞춰줘야함
-
-            #딜레이 고민중
-            # text_to_speech("처음으로 돌아갑니다", "output.mp3")
-
-            #딜레이 고민중
-            standby() # 처음으로 돌아가는 함수
-            
-        if standby_change == 'Q':
-            text_to_speech("취소하였습니다.", "output.mp3")
-            #딜레이 고민중
-            standby() # 처음으로 돌아가는함수
-
-def add_thing_standby_one():
-    
-    ser = get_serial()
-    while True:
-        if ser.in_waiting > 0:
-            event = ser.read(1)
-            standby_change = react_to_event(event)
-
-            if standby_change == 'Q':  # 물음표 버튼 → standby() 호출
-                text_to_speech("메뉴로 돌아갑니다.", "output.mp3")
-                standby()
-            elif standby_change == 'O':  # 원터치 버튼 → 음성 인식 실행
-                analyze_thing(cap)
-                text_to_speech("이 물품을 보관하시겠습니까? 보관하시려면 원터치버튼을, 취소하시려면 물음표 버튼을 눌러주세요.", "output.mp3")
-                add_thing_standby_two()
-                
-            else:
-                print("잘못된 입력 감지")
-
-def add_thing_standby_two():
-    ser = get_serial()
-    while True:
-        if ser.in_waiting > 0:
-            event = ser.read(1)
-            standby_change = react_to_event(event)
-            
-            if standby_change == 'Q':  # 물음표 버튼 → standby() 호출
-                text_to_speech("메뉴로 돌아갑니다.", "output.mp3")
-                standby()
-            elif standby_change == 'O':  # 원터치 버튼 → 음성 인식 실행
-                text_to_speech("이 물품의 이름을 말해주세요.", "output.mp3")
-                record_and_save_thing()
-    return
-
 def react_to_event(event):
+    current_time = time.time()
+    # 만일 현재 이벤트가 5초 안에 연속으로 일어난것이면 무시
+    if event in last_event_time and (current_time - last_event_time[event] < 5):
+        print(f"Ignored repeated event: {event}")
+        return None  # Don't return a valid command
+
+    # 시간 업데이트
+    last_event_time[event] = current_time
+
     if event == b'1':
         print("1번 소켓 버튼 눌림")
         return '1'
@@ -194,12 +96,6 @@ def react_to_event(event):
     elif event == b'3':
         print("1번 소켓 버튼 눌림")
         return '3'
-    elif event == b'O':
-        print("원터치 버튼 눌림")
-        return 'O'
-    elif event == b'Q':
-        print("물음표 버튼 눌림")
-        return 'Q'
     elif event == b'A':
         print("1번소켓 센서 변화")
         return 'A'
@@ -213,333 +109,331 @@ def react_to_event(event):
         print("이상신호 감지")
         return 'E'
 
+
 def main_function1():
-    text = "무엇을 도와드릴까요? 메뉴 설명을 들으시려면 물음표 버튼을 눌러주세요"
-    print(f"text: {text}")
-    text_to_speech(text, "output.mp3")
-    normalized_text = ""
+    # 음성인식 실행
     recognized_text = record_and_recognize(duration=7, filename="recorded_audio.wav")
     
     if recognized_text:
         # Normalize by removing all spaces
         normalized_text = recognized_text.replace(" ", "")
         print(f"Recognized Speech: {normalized_text}")
-        
-    if normalized_text == "약추가" or normalized_text == "역추가" or normalized_text == "약초가" or normalized_text == "역초가":
-        add_medicine()
-    elif normalized_text == "약삭제" or normalized_text == "역삭제":
-        delete_medicine()
-    elif normalized_text == "약스케쥴" or normalized_text == "역스케쥴":
-        listen_medicine_schedule()
-    elif normalized_text == "물건추가" or normalized_text == "물품추가":
-        add_thing()
-    elif normalized_text == "물건삭제" or normalized_text == "물품삭제":
-        delete_thing()
+
     else:
         print("No speech recognized.")
     return
 
-def main_function2():
-    text = "메뉴는 다음과 같습니다. 약추가. 약삭제. 약스케쥴 설명. 물품추가. 물품삭제. 물품묘사"
-    text_to_speech(text, "output.mp3")
-    main_function1()    
-    return
-
-# 약 추가 함수
-def add_medicine():
-    print("약추가 실행")
-    text = "약 정보 메모지를 스테이지에 올려놓으신 후 원터치 버튼을 눌러주세요. 취소하시려면 물음표 버튼을 눌러주세요"
-    text_to_speech(text, "output.mp3")
-    try:
-        # cap = init_camera()
-        add_medicine_standby()
-    except RuntimeError as e:
-        print("Warning: Webcam initialization failed:", e)
-    return
-
-# 약 삭제 함수
-def delete_medicine():
-    print("약삭제 실행")
-    text = "몇번 소켓의 약을 삭제 하시겠습니까?"
-    text_to_speech(text, "output.mp3")
-    
-    #취소 누른 경우
-    # if react_to_event(b'Q'): 
-    #     standby()
-    #delete_medicine_standby() 스탠바이를 어떤 형식으로 써야하는지
-    #번호를 누르면 그거에따라 번호누르는 신호가 와야함
-    recognized_text = record_and_recognize(duration=7, filename="recorded_audio.wav")
-    
-    if recognized_text:
-        print(f"Recognized Speech: {recognized_text}")
-        
-        if recognized_text == "일번" or "1번" or "일본":
-            text_to_speech("1번", "output.mp3")
-            delete_number = 1
-        elif recognized_text == "이번" or "2번":
-            text_to_speech("2번", "output.mp3")
-            delete_number = 2
-        elif recognized_text == "삼번" or "3번":
-            text_to_speech("3번", "output.mp3")
-            delete_number = 3
-        else:
-            text_to_speech("죄송합니다. 소켓 번호를 인식하지 못했습니다.", "output.mp3")
-            #다시 약삭제 함수 실행
-            delete_medicine()
-
-    # 여기에 딜레이를 넣어야할지 고민중
-    text = "소켓에서 약을 제거해 주신 후 원터치 버튼을 눌러주세요. 취소하시려면 물음표버튼을 눌러주세요."
-    text_to_speech(text, "output.mp3")
-    delete_medicine_standby(delete_number) #이 함수에 딜리트 넘버를 넣음
-
-    return
-
-def listen_medicine_schedule():
-    """
-    Retrieves the medication schedules and status from the database and
-    returns a descriptive string about which medicines (by socket) are scheduled
-    and which time slots have not been taken yet.
-    """
-    from medication_db import get_all_schedules, get_all_statuses
-
-    # Get all scheduled medications and their statuses.
-    schedules = get_all_schedules()   # Each record: (id, medicine, socket, morning, lunch, dinner)
-    statuses = get_all_statuses()       # Each record: (id, medicine, socket, morning, lunch, dinner)
-    
-    # Build a dictionary mapping socket to status record for easier lookup.
-    status_dict = {}
-    for stat in statuses:
-        # Assuming the tuple structure is: (id, medicine, socket, morning, lunch, dinner)
-        status_dict[stat[2]] = stat
-
-    messages = []
-    for sched in schedules:
-        socket = sched[2]
-        medicine = sched[1]
-        # Determine which time slots are scheduled.
-        scheduled_slots = []
-        if sched[3]:
-            scheduled_slots.append("아침")
-        if sched[4]:
-            scheduled_slots.append("점심")
-        if sched[5]:
-            scheduled_slots.append("저녁")
-        
-        # Check the corresponding status to see which slots remain not taken.
-        not_taken = []
-        stat = status_dict.get(socket)
-        if stat:
-            # Here, we assume that a value of 1 (or True) in the status means it has been taken.
-            # So if the schedule indicates a slot (e.g., sched[3] is True) but the status is 0, it's not taken.
-            if sched[3] and not stat[3]:
-                not_taken.append("아침")
-            if sched[4] and not stat[4]:
-                not_taken.append("점심")
-            if sched[5] and not stat[5]:
-                not_taken.append("저녁")
-        else:
-            # No status record found; assume none of the scheduled slots have been taken.
-            not_taken = scheduled_slots.copy()
-        
-        if not_taken:
-            slots_str = ", ".join(not_taken)
-            messages.append(f"{medicine} (소켓 {socket})은(는) {slots_str}에 복용 예정이나 아직 복용하지 않으셨습니다.")
-        else:
-            messages.append(f"{medicine} (소켓 {socket})은(는) 모두 복용하셨습니다.")
-    
-    if messages:
-        return " ".join(messages)
-    else:
-        return "현재 복용 예정인 약이 없습니다."
-
-
-def add_thing():
-    print("물건추가 실행")
-        
-    text = "물건을 스테이지에 올려놓으신 후 원터치 버튼을 눌러주세요. 취소하시려면 물음표 버튼을 눌러주세요"
-    text_to_speech(text, "output.mp3")
-    add_thing_standby_one()
-
-    return
-
-def delete_thing():
-    print("물건삭제 실행")
-    text = "몇번 소켓의 물건을 삭제 하시겠습니까?"
-    text_to_speech(text, "output.mp3")
-    recognized_text = record_and_recognize(duration=7, filename="recorded_audio.wav")
-
-    if recognized_text:
-        print(f"Recognized Speech: {recognized_text}")
-        
-        if recognized_text == "일번" or "1번" or "일본":
-            text_to_speech("1번", "output.mp3")
-            delete_number = 1
-        elif recognized_text == "이번" or "2번":
-            text_to_speech("2번", "output.mp3")
-            delete_number = 2
-        elif recognized_text == "삼번" or "3번":
-            text_to_speech("3번", "output.mp3")
-            delete_number = 3
-        else:
-            text_to_speech("죄송합니다 소켓 번호를 인식하지 못했습니다", "output.mp3")
-            #다시 물건삭제 함수 실행
-            delete_thing()
-
-    # 여기에 딜레이를 넣어야할지 고민중
-    text = "소켓에서 물건을 제거해 주신 후 원터치 버튼을 눌러주세요, 취소하시려면 물음표버튼을 눌러주세요"
-    text_to_speech(text, "output.mp3")
-    delete_thing_standby(delete_number)
-
-    return
 
 def take_medicine(sensor):
     """
     Called when a sensor signal (e.g., b'A', b'B', b'C') is received.
-    Determines the current time slot and, if the medicine scheduled in the corresponding socket
-    has that slot enabled, increments the corresponding counter and announces the event.
-    If there's no medicine schedule but a thing is stored, it announces that the socket contains that thing.
-    If neither exists, it announces that the socket is empty.
+    For non-medicine items, simply announces that the item was taken.
+    For medicines, checks if it's the correct time to take it. If so,
+    decrements total_amount and marks the status as taken (1). If not the right time,
+    announces that either the medicine is already taken or it is not the correct time.
+    If the cabinet is empty, announces that no item is registered.
     """
     print("약복용 실행")
-    # Map sensor signals to socket numbers.
-    sensor_to_socket = {'A': '1', 'B': '2', 'C': '3'}
-    socket = sensor_to_socket.get(sensor, sensor)  # Default to sensor if mapping not found
+    
+    # Map sensor signals to cabinet box numbers.
+    sensor_to_box = {'A': 1, 'B': 2, 'C': 3}
+    box_num = sensor_to_box.get(sensor, sensor)  # Use sensor value as fallback if not found
 
+    # Retrieve the cabinet details for the given box number
+    cabinet_details = get_cabinet_by_box_num(box_num)
+    
+    if not cabinet_details:
+        message = f"{box_num}번 보관함에 대한 정보를 찾을 수 없습니다."
+        text_to_speech(message, "output.mp3")
+        return message
+    
+    # Table column order:
+    # 0: cabinet_id, 1: name, 2: box_num, 3: taken, 4: medicine_bool, 5: total_amount,
+    # 6: breakfast, 7: lunch, 8: dinner, 9: breakfast_status, 10: lunch_status, 11: dinner_status, ...
+    medicine_name    = cabinet_details[1]  # Name of the medicine or item
+    taken            = cabinet_details[3]  # Boolean: whether the cabinet is occupied
+    medicine_bool    = cabinet_details[4]  # Boolean: whether it's medicine or not
+    total_amount     = cabinet_details[5]  # Total amount of medicine
+    breakfast_flag   = cabinet_details[6]  # 1 if scheduled for breakfast, 0 otherwise
+    lunch_flag       = cabinet_details[7]  # 1 if scheduled for lunch, 0 otherwise
+    dinner_flag      = cabinet_details[8]  # 1 if scheduled for dinner, 0 otherwise
+    breakfast_status = cabinet_details[9]  # 0 if not taken, 1 if taken (breakfast)
+    lunch_status     = cabinet_details[10] # 0 if not taken, 1 if taken (lunch)
+    dinner_status    = cabinet_details[11] # 0 if not taken, 1 if taken (dinner)
+    
+    # If the cabinet is empty, announce that nothing is registered.
+    if not taken:
+        message = f"{box_num}번 보관함에는 약이나 물건이 등록되어있지 않습니다."
+        text_to_speech(message, "output.mp3")
+        return message
+
+    # If it's not medicine, announce that the item was taken.
+    if not medicine_bool:
+        message = f"{medicine_name}을 꺼내셨습니다."
+        text_to_speech(message, "output.mp3")
+        return message
+
+    # Determine current time slot based on current hour.
     now = datetime.datetime.now()
     current_hour = now.hour
     slot = None
-    # Define time ranges (adjust as needed)
     if 6 <= current_hour < 11:
-        slot = "morning"
+        slot = "breakfast"
     elif 11 <= current_hour < 16:
         slot = "lunch"
     elif 17 <= current_hour < 22:
         slot = "dinner"
     else:
-        # Default to morning if out of range
-        slot = "morning"
+        slot = "breakfast"  # Default to breakfast if out of range
 
-    # Retrieve the medication schedule for this socket.
-    schedule = get_schedule_by_socket(socket)
-    if schedule is None:
-        # No medicine schedule exists. Check if a thing is stored.
-        thing = get_socket_content(socket)
-        if thing:
-            text_to_speech(f"{thing} 물품입니다.", "output.mp3")
-        else:
-            text_to_speech("해당 소켓은 비어있습니다", "output.mp3")
-        return
-
-    # The schedule record is assumed to be:
-    # (id, medicine, socket, morning, lunch, dinner)
-    medicine = schedule[1]  # medicine name
+    # Check if the scheduled flag is set and the status is not taken (0) for the current slot.
     scheduled = False
-    if slot == "morning" and schedule[3]:
+    if slot == "breakfast" and breakfast_flag == 1 and breakfast_status == 0:
         scheduled = True
-    elif slot == "lunch" and schedule[4]:
+    elif slot == "lunch" and lunch_flag == 1 and lunch_status == 0:
         scheduled = True
-    elif slot == "dinner" and schedule[5]:
+    elif slot == "dinner" and dinner_flag == 1 and dinner_status == 0:
         scheduled = True
 
     if scheduled:
-        if increment_status_by_socket(socket, slot):
-            announcement = f"{medicine} 약을 복용하셨습니다"
+        # If it's the right time, decrement total_amount and update the status to taken (1).
+        new_total_amount = total_amount - 1
+        if new_total_amount >= 0:
+            # Prepare updated status values
+            new_breakfast_status = breakfast_status
+            new_lunch_status = lunch_status
+            new_dinner_status = dinner_status
+            if slot == "breakfast":
+                new_breakfast_status = 1
+            elif slot == "lunch":
+                new_lunch_status = 1
+            elif slot == "dinner":
+                new_dinner_status = 1
+            
+            # Update the cabinet record.
+            update_cabinet(
+                medicine_name,
+                box_num,
+                taken=True,
+                medicine_bool=True,
+                total_amount=new_total_amount,
+                breakfast=breakfast_flag,
+                lunch=lunch_flag,
+                dinner=dinner_flag,
+                breakfast_status=new_breakfast_status,
+                lunch_status=new_lunch_status,
+                dinner_status=new_dinner_status
+            )
+            announcement = f"{medicine_name}을 복용하시기 위해 꺼내셨습니다. 남은 약은 {new_total_amount}일치입니다."
             text_to_speech(announcement, "output.mp3")
+            return announcement
         else:
-            text_to_speech("약을 이미 복용하셨습니다.", "output.mp3")
+            announcement = f"{medicine_name}의 약이 부족하여 복용할 수 없습니다."
+            text_to_speech(announcement, "output.mp3")
+            return announcement
     else:
-        text_to_speech("현재 시간에 해당하는 복용 스케줄이 없습니다", "output.mp3")
+        # If it's not the right time or the medicine has already been taken.
+        if slot == "breakfast" and breakfast_status == 1:
+            message = f"{medicine_name}은 이미 복용하셨습니다."
+            text_to_speech(message, "output.mp3")
+            return message
+        elif slot == "lunch" and lunch_status == 1:
+            message = f"{medicine_name}은 이미 복용하셨습니다."
+            text_to_speech(message, "output.mp3")
+            return message
+        elif slot == "dinner" and dinner_status == 1:
+            message = f"{medicine_name}은 이미 복용하셨습니다."
+            text_to_speech(message, "output.mp3")
+            return message
+        else:
+            message = f"{medicine_name}을 복용하실 시간이 아닙니다."
+            text_to_speech(message, "output.mp3")
+            return message
+
+def listen_medicine_schedule(socket):
+    """
+    Listens to the cabinet details when a button is pressed, provides information about
+    which medicine is in that cabinet, how much is left, the schedule of when to take it,
+    and whether it has been taken or not. If it's not medicine (i.e., medicine_bool is False),
+    it will announce the item stored in the cabinet. If the cabinet is empty (taken is False),
+    it will announce that the cabinet is empty.
+    """
+    # Get cabinet details for the given socket (box_num).
+    cabinet_details = get_cabinet_by_box_num(socket)
+    
+    if not cabinet_details:
+        message = f"보관함 {socket}에 대한 정보를 찾을 수 없습니다."
+        text_to_speech(message, "output.mp3")
+        return message
+
+    # Column mapping based on the new table structure:
+    # 0: cabinet_id, 1: name, 2: box_num, 3: taken, 4: medicine_bool, 5: total_amount,
+    # 6: breakfast, 7: lunch, 8: dinner, 9: breakfast_status, 10: lunch_status, 11: dinner_status
+    medicine_name    = cabinet_details[1]
+    taken            = cabinet_details[3]
+    medicine_bool    = cabinet_details[4]
+    total_amount     = cabinet_details[5]
+    breakfast_flag   = cabinet_details[6]
+    lunch_flag       = cabinet_details[7]
+    dinner_flag      = cabinet_details[8]
+    breakfast_status = cabinet_details[9]
+    lunch_status     = cabinet_details[10]
+    dinner_status    = cabinet_details[11]
+    
+    # If the cabinet is empty, announce it.
+    if not taken:
+        message = f"{socket}번 보관함은 현재 비어있습니다."
+        text_to_speech(message, "output.mp3")
+        return message
+
+    # If it's not medicine, announce that the item is stored.
+    if not medicine_bool:
+        message = f"{socket}번 보관함에는 {medicine_name}이 보관되어 있습니다."
+        text_to_speech(message, "output.mp3")
+        return message
+
+    # Build the schedule time string for medicine.
+    scheduled_times = []
+    if breakfast_flag:
+        scheduled_times.append("아침")
+    if lunch_flag:
+        scheduled_times.append("점심")
+    if dinner_flag:
+        scheduled_times.append("저녁")
+    
+    if not scheduled_times:
+        scheduled_str = "복용 스케쥴이 지정되어 있지 않습니다."
+    else:
+        scheduled_str = " ".join(scheduled_times) + "으로 복용하고 계십니다."
+
+    # Build the intake status string.
+    intake_status_parts = []
+    if breakfast_flag:
+        status = "드셨습니다." if breakfast_status == 1 else "아직 안드셨습니다."
+        intake_status_parts.append(f"아침약은 {status}")
+    if lunch_flag:
+        status = "드셨습니다." if lunch_status == 1 else "아직 안드셨습니다."
+        intake_status_parts.append(f"점심약은 {status}")
+    if dinner_flag:
+        status = "드셨습니다." if dinner_status == 1 else "아직 안드셨습니다."
+        intake_status_parts.append(f"저녁약은 {status}")
+    
+    intake_status_str = " , ".join(intake_status_parts)
+    
+    # Build the remaining medicine amount string.
+    remaining_str = f"현재 약은 {total_amount}일치가 남아있습니다." if total_amount is not None else ""
+    
+    # Final message.
+    final_message = (
+        f"{medicine_name}은 {socket}번 보관함에 보관되어 있으며, {scheduled_str} "
+        f"{remaining_str} 오늘 {intake_status_str}."
+    )
+    
+    text_to_speech(final_message, "output.mp3")
+    return final_message
+
+def analyze_thing_main():
+    analyze_thing(cap)
 
 def press_button(socket):
-    from medication_db import get_schedule_by_socket, get_socket_content
-    from speak import text_to_speech
+    """
+    Function to press a button, check the cabinet info, and announce the schedule and
+    remaining amount of medicine.
+    """
+    # Listen to the medicine schedule in the cabinet
+    message = listen_medicine_schedule(socket)
+    print(message)
+    return message
 
-    # Look for a medicine schedule in the given socket.
-    schedule = get_schedule_by_socket(socket)
-    # Look for a stored thing in the given socket.
-    thing = get_socket_content(socket)
+#쓰레드로 시리얼 신호 받기 준비
+def serial_standby():
+    print("main serial standby entered...")
+    # Start the serial listener in the background
+    serial_thread = Thread(target=standby, daemon=True)
+    serial_thread.start()
 
-    announcement = ""
-    if schedule:
-        # The schedule record is assumed to be: (id, medicine, socket, morning, lunch, dinner)
-        medicine = schedule[1]
-        time_slots = []
-        if schedule[3]:
-            time_slots.append("아침")
-        if schedule[4]:
-            time_slots.append("점심")
-        if schedule[5]:
-            time_slots.append("저녁")
-        if time_slots:
-            slots_str = ", ".join(time_slots)
-            announcement += f"소켓 {socket}에는 {medicine} 복용약이 있으며, {slots_str}에 섭취 예정입니다. "
-        else:
-            announcement += f"소켓 {socket}에는 {medicine} 복용약이 있습니다. "
-    if thing:
-        announcement += f"{socket}번 소켓에는 {thing} 물건이 보관되어 있습니다."
-    if not announcement:
-        announcement = f"소켓 {socket}은 비어있습니다."
-    
-    print("소켓내용 설명 실행:", announcement)
-    text_to_speech(announcement, "output.mp3")
-    return
+    # Main logic for standby mode (other tasks can go here, e.g., wait for a button press)
+    while True:
+        time.sleep(1)  # This prevents blocking and keeps the main loop running
 
-# 빈 소켓을 찾는 함수
-def get_empty_shared_socket():
-    """Returns the first socket (from '1','2','3') that is not occupied by either a medication or a thing."""
-    used = set()
-    schedules = get_all_schedules()
-    used.update({sched[2] for sched in schedules})
-    for sock in ['1', '2', '3']:
-        if get_socket_content(sock) is not None:
-            used.add(sock)
-    for sock in ['1', '2', '3']:
-        if sock not in used:
-            return sock
-    return None
-
-def record_and_save_thing():
-    """사용자의 음성을 인식하여 물품명을 저장하고, 빈 소켓에 저장 후 안내 메시지를 음성 출력."""
-    recognized_text = record_and_recognize(duration=5, filename="recorded_audio.wav")
+def chat_with_agent():
+    #Start speech recognition
+    recognized_text = record_and_recognize(duration=10, filename="recorded_audio.wav")
     
     if recognized_text:
-        empty_socket = get_empty_shared_socket()
-        if empty_socket is None:
-            text_to_speech("빈 소켓이 없습니다.", "output.mp3")
-        else:
-            add_socket_content(empty_socket, recognized_text)  # Save into the chosen socket.
-            announcement = f"{recognized_text} 물건이이 {empty_socket}번 소켓에 보관 되었습니다."
-            text_to_speech(announcement, "output.mp3")
+        # Normalize by removing all spaces
+        normalized_text = recognized_text.replace(" ", "")
+        print(f"Recognized Speech: {normalized_text}")
+
+        # Send recognized text to FastAPI for processing
+        conversation_id = "default"  # Default or dynamically generated conversation ID
+        current_step = None  # This can be updated based on backend responses
+
+        # Send to FastAPI and receive response
+        answer, intent, current_step, context = send_to_fastapi(normalized_text, conversation_id, current_step)
+
+        # Print FastAPI response
+        print("AI:", answer)
+        print("Intent:", intent)
+
+        # Speak the response out loud
+        text_to_speech(answer, "output.mp3")
+
+        # Handle the intent (trigger actions, etc.)
+        if intent:
+            print(f"Intent detected: {intent}")
+            handle_action(intent)
     else:
-        text_to_speech("음성을 인식하지 못했습니다.", "output.mp3")
-        record_and_save_thing()  # Retry if recognition failed.
+        print("No speech recognized.")
 
-    # After adding, return to standby.
-    standby()
+def wake_standby():
+    """Starts the wake word detector in its own thread."""
+    access_key = '4Oq64nx56v+RmQxw19SRrmshUDz3enMp6oDoUKn1aO7TITdw3BtkwQ=='
+    # Provide the keyword file as a list.
+    keyword_paths = ['/home/abcd/PythonProjects/SigakDoumi/yakson_ko_raspberry-pi_v3_0_0.ppn']
+    model_path = '/home/abcd/PythonProjects/SigakDoumi/porcupine_params_ko.pv'
 
-
-def analyze_memo():
-    global cap
-    converter = MedicineScheduleConverter()
-    converter.analyze_memo(cap)
-
-    # 약 스케쥴 추가 한후 메인 스탠바이로 복귀
-    standby()
-
-
+    detector = WakeWordDetector(
+        callback=chat_with_agent,
+        access_key=access_key,
+        keyword_paths=keyword_paths,  # Now explicitly a list.
+        model_path=model_path
+    )
+    
+    wake_thread = Thread(target=detector.run, daemon=True)
+    wake_thread.start()
 def main():
     global cap
-
+    print("Starting main function: Speech recognition and interaction with FastAPI")
+    
+    # Initialize the camera and the database
     init_db()
     print("Medication database initialized.\n")
     cap = init_camera()
     print("Webcam initialized and ready.")
-    # standby()
-    # main_function1()
-    # analyze_memo(cap)
-    capture_image(cap)
+    wake_standby()
 
-    release_camera(cap)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        release_camera(cap)
+
+def handle_action(intent):
+    global cap
+    print("handle action method")
+    if intent == "DESCRIBE_THING":
+        print("handle action: describe thing")
+        analyze_thing(cap)
+        print("Performing action: analyze image")
+        # Trigger the corresponding action on Raspberry Pi or your system
+        # You can add more logic here to interact with databases, APIs, etc.
+
+
 
 if __name__ == "__main__":
+    serial_thread = Thread(target=serial_standby, daemon=True)
+    serial_thread.start()
+    # serial_standby()
     main()
