@@ -4,3 +4,4 @@ lib/
 __pycache__/
 *.mp3
 *.wav
+model/

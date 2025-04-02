@@ -4,7 +4,6 @@ import serial
 from speak import text_to_speech
 from stt import record_and_recognize
 from camera import init_camera, capture_image, release_camera
-from ocr import send_image_for_ocr  # New import
 import os
 import time, datetime
 from chat import send_to_fastapi  # Import send_to_fastapi from chat.py
