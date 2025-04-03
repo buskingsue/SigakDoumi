@@ -14,3 +14,7 @@
 
 * Project Github : https://github.com/cschuadj721/SigakDoumi
 * 발표자료 : https://github.com/cschuadj721/SigakDoumi/blob/master/%EC%8B%9C%EA%B0%81%EC%9E%A5%EC%95%A0%EC%9D%B8%20%EA%B2%BD%EA%B5%AC%EC%95%BD%20%EC%84%AD%EC%B7%A8%20%26%20%EB%AC%BC%ED%92%88%EB%B3%B4%EA%B4%80%20%EB%8F%84%EC%9A%B0%EB%AF%B8(%EC%88%98%EC%A0%95%EB%B3%B8).pptx
+
+##
+## 프로젝트 발표 날짜 2025.04.02(수)
+## 파주시 경기 인력 개발원
