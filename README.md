@@ -9,7 +9,7 @@
   | 이동준 | Project manager, 프로젝트를 총괄, 코드 병합 |
   | 박원석 | Project manager, 마일스톤을 생성하고 프로젝트 이슈 진행상황을 관리한다. |
   | 김건휘 | UI design, 사용자 인터페이스를 정의하고 구현한다. |
-  | 강동수 | 음성인식 wake word 구현 시연 동영상 촬영 편집 |
+  | 강동수 | 음성인식 wake word 구현 시연 동영상 촬영 편집 TTS MP3파일 음질 개선 목소리 출력|
   | 윤승건 | Architect, 프로젝트의 component를 구성하고 상위 디자인을 책임진다. |
 
 * Project Github : https://github.com/cschuadj721/SigakDoumi
