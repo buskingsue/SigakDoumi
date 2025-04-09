@@ -3,7 +3,7 @@ from contextlib import closing
 import os
 
 # PostgreSQL connection string
-DB_CONNECTION_STRING = os.getenv("POSTGRESQL_CONNECTION_STRING", "postgresql://abcd:1234@141.164.46.113:5432/smarthomedb2")
+DB_CONNECTION_STRING = os.getenv("POSTGRESQL_CONNECTION_STRING", "postgresql://abcd:1234@111.111.11.111:5432/userdb")
 
 # Function to establish PostgreSQL connection
 def get_db_connection():
