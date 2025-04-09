@@ -1,9 +1,9 @@
 ## Team name : 약손
 <Instruction>
 본 프로그램은 main PC, backend server, db server 이렇게 세파트를 각각 설치하고,
-이 세 파트의 정보가 모두 일치해야 작동 합니다.
-api_gpt.txt에는 open ai key가 입력 되어있어야 합니다.(main pc)
-backend의 postgreDB 서버 정보 올바로 입력해야 작동합니다
+이 세 파트의 정보가 모두 일치해야 작동 합니다.\n\n
+api_gpt.txt에는 open ai key가 입력 되어있어야 합니다.(main pc)\n\n
+backend의 postgreDB 서버 정보 올바로 입력해야 작동합니다\n\n
 porcupine.com 에서 wake-word 를 생성하여 main pc에 저장해야 wake word가 작동합니다.
 
 <프로젝트 요약>
