@@ -4,3 +4,6 @@ lib/
 __pycache__/
 *.mp3
 *.wav
+model/
+api_gpt.txt
+.env

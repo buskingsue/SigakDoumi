@@ -4,24 +4,27 @@ import sounddevice as sd
 import soundfile as sf
 from google.cloud import speech
 
-# 구글 인증키 정보
+# Google Cloud credentials
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
 
-# 마이크 장비 선택하기
-sd.default.device = 2
-
-# Define a sample rate (16kHz is typical for speech recognition)
-SAMPLE_RATE = 16000
+# Define a sample rate (44.1kHz as per your tested setting)
+SAMPLE_RATE = 44100  # 44.1kHz is the sample rate you used with arecord
+CHANNELS = 1  # Mono channel (1 channel, as the device supports mono)
 
 def record_audio(duration=5, filename="recorded_audio.wav", samplerate=SAMPLE_RATE):
     """
     Records audio from the microphone for a given duration and saves it as a WAV file.
     """
     print(f"Recording audio from mic for {duration} seconds...")
-    audio = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1, dtype='int16')
+    
+    # Use sounddevice to record audio with the specified preferences
+    audio = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=CHANNELS, dtype='int16')
     sd.wait()  # Wait until recording is finished
+    
+    # Save the audio to a file
     sf.write(filename, audio, samplerate)
     print(f"Recording complete. Saved as {filename}")
+    
     return filename
 
 def speech_to_text(audio_path):
@@ -56,6 +59,7 @@ def record_and_recognize(duration=5, filename="recorded_audio.wav"):
     """
     Convenience function that records audio from the microphone and performs STT.
     """
+    print("Recording and analyzing...")
     audio_file = record_audio(duration=duration, filename=filename)
     # Optional: Wait a bit before recognition if needed
     return speech_to_text(audio_file)

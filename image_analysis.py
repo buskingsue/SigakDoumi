@@ -70,24 +70,29 @@ def analyze_image(processed_image):
 def capture_image_for_analysis(cap):
     """
     Captures one frame from the webcam, sets a high resolution,
-    crops the region of interest (ROI), and returns the cropped image.
+    crops the region of interest (ROI), saves both the initial capture and final ROI,
+    and returns the cropped image.
     """
-
-    # Set high resolution for better detail
+    # Set high resolution for better detail.
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     
     ret, frame = cap.read()
-    cap.release()
     if not ret:
         print("Failed to capture frame from camera")
         return None
 
-    # Define the crop box (ROI) coordinates similar to paddle_client.py
-    start_x, start_y = 570, 150
-    box_width, box_height = 800, 700
+    # Save the initially captured image.
+    cv2.imwrite("initial_captured_image.jpg", frame)
+    
+    # Define the crop box (ROI) coordinates.
+    start_x, start_y = 0, 0
+    box_width, box_height = 1920, 1080
     end_x, end_y = start_x + box_width, start_y + box_height
     roi = frame[start_y:end_y, start_x:end_x]
+    
+    # Save the final cropped image.
+    cv2.imwrite("final_cropped_image.jpg", roi)
     
     return roi
 
@@ -103,7 +108,7 @@ def analyze_thing(cap):
 
     analysis = analyze_image(processed_image)
     if analysis:
-        # Preprocess the analysis text: remove all symbols, keeping only alphanumeric characters and whitespace.
+        # Preprocess the analysis text: remove all symbols, keeping only alphanumeric characters, whitespace, and periods.
         cleaned_analysis = ''.join(ch for ch in analysis if ch.isalnum() or ch.isspace() or ch == '.')
         print("ChatGPT Analysis (cleaned):")
         print(cleaned_analysis)
