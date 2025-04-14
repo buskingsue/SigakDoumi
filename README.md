@@ -9,8 +9,8 @@
 ##
 
 <Instruction>
-본 프로그램은 main PC, backend server, db server 이렇게 세파트를 각각 설치하고,
-이 세 파트의 정보가 모두 일치해야 작동 합니다.
+본 프로그램은 main PC, backend server, db server 이렇게 3개의 파트를 각각 설치하고,
+이 3개의 파트의 정보가 모두 일치해야 작동 합니다.
 
 api_gpt.txt에는 open ai key가 입력 되어있어야 합니다.(main pc)
 
