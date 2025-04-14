@@ -1,4 +1,11 @@
 ## Team name : 약손
+
+<프로젝트 요약>
+시각장애인 분들이 약품을 섭취하는데 있어, 약 위치를 기억하는 것과, 약의 내용을 파악하는데 어려움을 겪는바,
+이 문제를 해소하고 자 함
+동영상 링크 https://www.youtube.com/shorts/kx53VioThrg
+##
+
 <Instruction>
 본 프로그램은 main PC, backend server, db server 이렇게 세파트를 각각 설치하고,
 이 세 파트의 정보가 모두 일치해야 작동 합니다.
@@ -9,9 +16,7 @@ backend의 postgreDB 서버 정보 올바로 입력해야 작동합니다
 
 porcupine.com 에서 wake-word 를 생성하여 main pc에 저장해야 wake word가 작동합니다.
 
-<프로젝트 요약>
-시각장애인 분들이 약품을 섭취하는데 있어, 약 위치를 기억하는 것과, 약의 내용을 파악하는데 어려움을 겪는바,
-이 문제를 해소하고 자 함
+
 
 * Members
   | Name | Role |
