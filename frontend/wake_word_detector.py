@@ -3,7 +3,7 @@ import os
 import time
 import pyaudio
 import pvporcupine
-from speak import text_to_speech  # Your project’s TTS function
+from frontend.speak import text_to_speech  # Your project’s TTS function
 
 class WakeWordDetector:
     def __init__(self, callback, access_key, keyword_paths, model_path):
