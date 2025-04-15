@@ -4,7 +4,6 @@
 ### 시각장애인 분들이 약품을 섭취하는데 있어, 약 위치를 기억하는 것과,
 ### 약의 내용을 파악하는데 어려움을 겪는바, 이 문제를 해소하고 자 함
 ## <img width = "40%" src= "https://github.com/buskingsue/SigakDoumi/blob/master/papers/YAKSON.png">
-##
 ## 동영상 링크 https://www.youtube.com/shorts/kx53VioThrg
 ##
 
